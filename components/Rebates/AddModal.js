@@ -32,7 +32,6 @@ export const AddModal = ({open, handleClose, setIsSubmitted}) => {
     const [selected, setCheckedIds] = useState([]);
     
     const { loading, error, data, refetch } = useQuery(GET_BRANDS_PRODUCTS_QUERY,{
-            // skip:!open,
             variables: {
                 offset: page * rowsPerPage,
                 limit: rowsPerPage
@@ -41,14 +40,6 @@ export const AddModal = ({open, handleClose, setIsSubmitted}) => {
 
     const totalRebateCounts = data?.Products_aggregate?.aggregate?.count;
     console.log("after add modal seleced", selected);
-
-    // useEffect(() => {
-    //     if (open) {
-    //         refetch();
-    //         setCheckedIds([]);
-    //     }
-
-    // }, [open, refetch])
 
     // Pagination handlers
     const handlePageChange = (event, newPage) => {
@@ -97,11 +88,6 @@ export const AddModal = ({open, handleClose, setIsSubmitted}) => {
         const dataObjectArray = await selected.map((item) => {
             return { product_id: item };
           });
-        console.log("selected in add action", selected);
-        console.log("dataObjectArray in add action", dataObjectArray);
-
-        console.log("formstate", formstate)
-
         const { returnData } = await insertRebateWithProducts({
             variables: {
                 "title": formstate.title,

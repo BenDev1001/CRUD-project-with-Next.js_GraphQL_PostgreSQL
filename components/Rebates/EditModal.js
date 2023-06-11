@@ -73,9 +73,7 @@ export const EditModal = ({open, handleClose, setIsSubmitted, selectedId, isView
         });
         const checkProductsIds = selectedRebateData?.Rebates_Rebate_products?.map(item => item.product_id);
         await setCheckedIds(checkProductsIds);
-        console.log("selected in open edit modal", selectedRebateData)
     }
-    console.log("after checking selected", selected)
 
     useEffect(() => {
         if (!loading && data) {
@@ -119,20 +117,6 @@ export const EditModal = ({open, handleClose, setIsSubmitted, selectedId, isView
         const dataObjectArray = await selected.map((item) => {
             return { rebate_id : editFormstate.id, product_id: item };
         });
-        console.log("dataObjectArray", dataObjectArray);
-
-
-        // await setEditFormState({
-        //     "id" : editFormstate.id,
-        //     "title": editFormstate.title,
-        //     "is_active": editFormstate.is_active,
-        //     "brand_id" : editFormstate.brand_id,
-        //     "description": editFormstate.description,
-        //     "start_date": editFormstate.start_date,
-        //     "end_date": editFormstate.end_date,
-        //     "object": dataObjectArray
-        // });
-        console.log("editFormstate", editFormstate)
 
         const { returnData } = await updateRebateWithProducts({
             variables: {

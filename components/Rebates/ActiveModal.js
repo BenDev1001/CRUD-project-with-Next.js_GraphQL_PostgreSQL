@@ -33,7 +33,6 @@ export const ActiveModal = ({open, handleClose, selectedId, isActive}) => {
       variables: { id : selectedId, "is_active" : !isActive },
     });
     handleClose();
-
   }
 
   return (
