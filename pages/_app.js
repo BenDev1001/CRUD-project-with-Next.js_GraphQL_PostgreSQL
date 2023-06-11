@@ -13,8 +13,12 @@ const lightTheme = createTheme({
 
 
 const client = new ApolloClient({
-  uri: "http://localhost:3000/api/graphql",
-  cache: new InMemoryCache()
+  // uri: "http://localhost:3000/api/graphql",
+  uri: "https://rebate-crud-1.hasura.app/v1/graphql",
+  cache: new InMemoryCache(),
+  headers: {
+    'x-hasura-admin-secret': process.env.hasuraAdminSecret,
+  },
 });
 
 

@@ -13,11 +13,10 @@ import Grid from '@mui/material/Unstable_Grid2';
 import Switch from '@mui/material/Switch';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import { useQuery, useMutation, gql } from '@apollo/client';
-import { GET_BRANDS_PRODUCTS_QUERY } from '../../crud-operations/queries';
-import {  INSERT_REBATE_WITH_PRODUCTS } from '../../crud-operations/mutations';
+import { GET_SELECTED_DATA_QUERY } from '../../crud-operations/queries';
+import { UPDATE_REBATE_WITH_PRODUCTS } from '../../crud-operations/mutations';
 import { Stack } from '@mui/material';
 import { ProductsTable } from './ProductsTable';
-
 
 
 const Transition = React.forwardRef(function Transition(props, ref) {
@@ -25,30 +24,65 @@ const Transition = React.forwardRef(function Transition(props, ref) {
 });
 
 
-export const AddModal = ({open, handleClose, setIsSubmitted}) => {
+export const EditModal = ({open, handleClose, setIsSubmitted, selectedId, isView}) => {
     
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(5);
     const [selected, setCheckedIds] = useState([]);
+    const [submitClicked, setSubmitClicked] = useState(false);
+    console.log("selectedId in edit modal", selectedId)
+
+
+    const [editFormstate, setEditFormState] = useState({
+        'id' : '',
+        "title": '',
+        "is_active": false,
+        "brand_id" : 1,
+        "description": '',
+        "start_date": new Date(),
+        "end_date": new Date(),
+        "object": [],
+    });
     
-    const { loading, error, data, refetch } = useQuery(GET_BRANDS_PRODUCTS_QUERY,{
-            // skip:!open,
+    const { loading, error, data, refetch } = useQuery(GET_SELECTED_DATA_QUERY,{
+            skip:!open,
             variables: {
                 offset: page * rowsPerPage,
-                limit: rowsPerPage
+                limit: rowsPerPage,
+                rebateId : {
+                    "_eq" : selectedId
+                }
             },
     });
 
     const totalRebateCounts = data?.Products_aggregate?.aggregate?.count;
-    console.log("after add modal seleced", selected);
 
-    // useEffect(() => {
-    //     if (open) {
-    //         refetch();
-    //         setCheckedIds([]);
-    //     }
 
-    // }, [open, refetch])
+    
+    const setFormDataToInput = async (data) => {
+        const selectedRebateData = data?.Rebates[0];
+        await setEditFormState({
+            "id" : selectedRebateData?.id,
+            "title": selectedRebateData?.title,
+            "is_active": selectedRebateData?.is_active,
+            "brand_id" : selectedRebateData?.brand_id,
+            "description": selectedRebateData?.description,
+            "start_date": selectedRebateData?.start_date,
+            "end_date": selectedRebateData?.end_date,
+            "object": []
+        });
+        const checkProductsIds = selectedRebateData?.Rebates_Rebate_products?.map(item => item.product_id);
+        await setCheckedIds(checkProductsIds);
+        console.log("selected in open edit modal", selectedRebateData)
+    }
+    console.log("after checking selected", selected)
+
+    useEffect(() => {
+        if (!loading && data) {
+            setFormDataToInput(data);
+        }
+    }, [loading, data]);
+
 
     // Pagination handlers
     const handlePageChange = (event, newPage) => {
@@ -60,77 +94,61 @@ export const AddModal = ({open, handleClose, setIsSubmitted}) => {
         setPage(0);
     };
 
-    const [formstate, setFormState] = useState({
-        "title": '',
-        "is_active": false,
-        "brand_id" : 1,
-        "description": '',
-        "start_date": new Date(),
-        "end_date": new Date(),
-        "data": [],
-    });
-
     const handleFormValueChange = (event) => {
-        setFormState({
-            ...formstate,
+        setEditFormState({
+            ...editFormstate,
             [event.target.name]: event.target.value
         });
     };
 
     const handleActiveChange = (event) => {
-        setFormState({
-            ...formstate,
+        setEditFormState({
+            ...editFormstate,
             [event.target.name] : event.target.checked
         })
     }
 
-    const [insertRebateWithProducts] = useMutation(INSERT_REBATE_WITH_PRODUCTS, {
-        onCompleted : () => {
+    const [updateRebateWithProducts] = useMutation(UPDATE_REBATE_WITH_PRODUCTS, {
+        onCompleted : (data) => {
             refetch();
-            // setCheckedIds([]);
-            handleCloseModal();
-            console.log("after saving selected",selected)
         }
     });
 
     const handleSubmit = async () => {
+        await setSubmitClicked(true);
         const dataObjectArray = await selected.map((item) => {
-            return { product_id: item };
-          });
-        console.log("selected in add action", selected);
-        console.log("dataObjectArray in add action", dataObjectArray);
+            return { rebate_id : editFormstate.id, product_id: item };
+        });
+        console.log("dataObjectArray", dataObjectArray);
 
-        console.log("formstate", formstate)
 
-        const { returnData } = await insertRebateWithProducts({
+        // await setEditFormState({
+        //     "id" : editFormstate.id,
+        //     "title": editFormstate.title,
+        //     "is_active": editFormstate.is_active,
+        //     "brand_id" : editFormstate.brand_id,
+        //     "description": editFormstate.description,
+        //     "start_date": editFormstate.start_date,
+        //     "end_date": editFormstate.end_date,
+        //     "object": dataObjectArray
+        // });
+        console.log("editFormstate", editFormstate)
+
+        const { returnData } = await updateRebateWithProducts({
             variables: {
-                "title": formstate.title,
-                "is_active": formstate.is_active,
-                "brand_id" : formstate.brand_id,
-                "description": formstate.description,
-                "start_date": formstate.start_date,
-                "end_date": formstate.end_date,
-                "data": dataObjectArray
+                "id" : editFormstate.id,
+                "title": editFormstate.title,
+                "is_active": editFormstate.is_active,
+                "brand_id" : editFormstate.brand_id,
+                "description": editFormstate.description,
+                "start_date": editFormstate.start_date,
+                "end_date": editFormstate.end_date,
+                "object": dataObjectArray
             }
-
         });
         await handleClose();
         await setIsSubmitted(true);
     };
-
-    const handleCloseModal = () => {
-        handleClose();
-        setCheckedIds([]);
-        setFormState({
-            "title": '',
-            "is_active": false,
-            "brand_id" : 1,
-            "description": '',
-            "start_date": new Date(),
-            "end_date": new Date(),
-            "data": [],
-        })
-    }
 
     if (loading) {
         return 'loading';
@@ -148,7 +166,7 @@ export const AddModal = ({open, handleClose, setIsSubmitted}) => {
         fullWidth
         TransitionComponent={Transition}
         keepMounted
-        onClose={handleCloseModal}
+        onClose={handleClose}
         aria-describedby="alert-dialog-slide-description"
         >
         <DialogTitle>{"Modal"}</DialogTitle>
@@ -160,7 +178,7 @@ export const AddModal = ({open, handleClose, setIsSubmitted}) => {
             >
                 <FormControl fullWidth>
                     <Grid xs={12} md={12}>
-                        <FormControlLabel control={<Switch checked={formstate.is_active} onChange={handleActiveChange} name="is_active" color="secondary" />} label="Active" />
+                        <FormControlLabel control={<Switch checked={editFormstate.is_active} onChange={handleActiveChange} name="is_active" color="secondary" />} label="Active" />
                     </Grid>
                     <Grid xs={12} md={12}>
                         <TextField
@@ -171,7 +189,7 @@ export const AddModal = ({open, handleClose, setIsSubmitted}) => {
                             required
                             select
                             SelectProps={{ native: true }}
-                            value={formstate.brand_id}
+                            value={editFormstate.brand_id}
                             >
                             {data?.Brands?.map((option) => (
                                 <option
@@ -189,7 +207,7 @@ export const AddModal = ({open, handleClose, setIsSubmitted}) => {
                         label="Promotion Title"
                         name="title"
                         onChange={handleFormValueChange}
-                        value = {formstate.title}
+                        value = {editFormstate.title}
                         required
                         />
                     </Grid>
@@ -199,7 +217,7 @@ export const AddModal = ({open, handleClose, setIsSubmitted}) => {
                         label="Description"
                         name="description"
                         onChange={handleFormValueChange}
-                        value = {formstate.description}
+                        value = {editFormstate.description}
                         required
                         />
                     </Grid>
@@ -210,7 +228,7 @@ export const AddModal = ({open, handleClose, setIsSubmitted}) => {
                         label="Start Date"
                         name="start_date"
                         onChange={handleFormValueChange}
-                        value={formstate.start_date}
+                        value={editFormstate.start_date}
                         required
                         />
                     </Grid>
@@ -221,7 +239,7 @@ export const AddModal = ({open, handleClose, setIsSubmitted}) => {
                         label="End Date"
                         name="end_date"
                         onChange={handleFormValueChange}
-                        value={formstate.end_date}
+                        value={editFormstate.end_date}
                         required
                         />
                     </Grid>
@@ -257,8 +275,9 @@ export const AddModal = ({open, handleClose, setIsSubmitted}) => {
         </DialogContent>
 
         <DialogActions>
-            <Button onClick={handleSubmit} variant='contained'>Save</Button>
-            <Button onClick={handleCloseModal}>Cancel</Button>
+            { isView ? <Button onClick={handleClose}>Confirm</Button> : <Button onClick={handleSubmit} variant='contained'>Save</Button> }
+            <Button onClick={handleClose}>Cancel</Button> 
+            
         </DialogActions>
 
         </Dialog>

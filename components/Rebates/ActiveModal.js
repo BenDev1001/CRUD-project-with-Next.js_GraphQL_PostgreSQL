@@ -7,7 +7,7 @@ import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
 import Paper from '@mui/material/Paper';
 import Draggable from 'react-draggable';
-import { DELETE_REBATE } from '../../crud-operations/mutations';
+import { ACTIVE_OR_INACTIVE_REBATE } from '../../crud-operations/mutations';
 import { useQuery, useMutation, gql } from '@apollo/client';
 
 function PaperComponent(props) {
@@ -21,19 +21,19 @@ function PaperComponent(props) {
   );
 }
 
-export const DeleteModal = ({open, handleClose, selectedId}) => {
+export const ActiveModal = ({open, handleClose, selectedId, isActive}) => {
 
-  const [deleteRebate] = useMutation(DELETE_REBATE, {
+  const [activeRebate] = useMutation(ACTIVE_OR_INACTIVE_REBATE, {
     onCompleted: (data) => {
-      window.location.reload();
     },
   });
   const handleSubmit = (e) => {
     e.preventDefault();
-    deleteRebate({
-      variables: { id : selectedId },
+    activeRebate({
+      variables: { id : selectedId, "is_active" : !isActive },
     });
     handleClose();
+
   }
 
   return (
@@ -45,11 +45,11 @@ export const DeleteModal = ({open, handleClose, selectedId}) => {
         aria-labelledby="draggable-dialog-title"
       >
         <DialogTitle style={{ cursor: 'move', color:'red' }} id="draggable-dialog-title">
-          Delete
+          {isActive ? "Inactive" : "Active"}
         </DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure to delete this rebate?
+            Are you sure to {isActive ? "inactive" : "active"} this rebate?
           </DialogContentText>
         </DialogContent>
         <DialogActions>
