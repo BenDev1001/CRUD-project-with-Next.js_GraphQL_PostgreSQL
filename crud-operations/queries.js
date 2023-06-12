@@ -34,62 +34,14 @@ const GET_BRANDS_QUERY = gql`
     }
   }
 `;
-const GET_BRANDS_PRODUCTS_QUERY = gql`
-  query getBrandsAndProducts($offset: Int, $limit: Int) {
-    Brands {
-      id
-      code
-      is_active
-      name
-    }
-    Products(offset: $offset, limit: $limit) {
-      id
-      title
-      description
-      sale_price
-      regular_price
-      brand_id
-      Brand {
-        id
-        code
-        is_active
-        name
-      }
-    }
-    Products_aggregate {
-      aggregate {
-        count
-      }
-    }
-  }
-`;
 
 const GET_SELECTED_DATA_QUERY = gql`
-  query getBrandsAndProducts($offset: Int, $limit: Int, $rebateId: Int_comparison_exp = {}) {
+  query getBrandsAndProducts($rebateId: Int_comparison_exp = {}) {
     Brands {
       id
       code
       is_active
       name
-    }
-    Products(offset: $offset, limit: $limit) {
-      id
-      title
-      description
-      sale_price
-      regular_price
-      brand_id
-      Brand {
-        id
-        code
-        is_active
-        name
-      }
-    }
-    Products_aggregate {
-      aggregate {
-        count
-      }
     }
     Rebates(where: {id: $rebateId}) {
       id
@@ -106,12 +58,34 @@ const GET_SELECTED_DATA_QUERY = gql`
   }
 `;
 
+const GET_PRODUCTS_BY_BRAND_QUERY = gql`
+    query getProducts($offset: Int, $limit: Int, $_eq: Int!) {
+      Products(offset: $offset, limit: $limit, where: {brand_id: {_eq: $_eq}}) {
+        id
+        title
+        description
+        sale_price
+        regular_price
+        brand_id
+        Brand {
+          id
+          code
+          is_active
+          name
+        }
+      }
+      Products_aggregate(where: {brand_id: {_eq: $_eq}}) {
+        aggregate {
+          count
+        }
+      }
+    }
+`;
 
 
 export {
   GET_RABATES_QUERY,
   GET_BRANDS_QUERY,
-  GET_BRANDS_PRODUCTS_QUERY,
-  GET_SELECTED_DATA_QUERY
-  
+  GET_SELECTED_DATA_QUERY,
+  GET_PRODUCTS_BY_BRAND_QUERY
 };

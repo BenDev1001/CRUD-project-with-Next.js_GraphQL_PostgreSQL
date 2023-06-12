@@ -13,7 +13,7 @@ import Grid from '@mui/material/Unstable_Grid2';
 import Switch from '@mui/material/Switch';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import { useQuery, useMutation, gql } from '@apollo/client';
-import { GET_BRANDS_PRODUCTS_QUERY } from '../../crud-operations/queries';
+import { GET_BRANDS_QUERY, GET_PRODUCTS_BY_BRAND_QUERY } from '../../crud-operations/queries';
 import {  INSERT_REBATE_WITH_PRODUCTS } from '../../crud-operations/mutations';
 import { Stack } from '@mui/material';
 import { ProductsTable } from './ProductsTable';
@@ -31,15 +31,28 @@ export const AddModal = ({open, handleClose, setIsSubmitted}) => {
     const [rowsPerPage, setRowsPerPage] = useState(5);
     const [selected, setCheckedIds] = useState([]);
     
-    const { loading, error, data, refetch } = useQuery(GET_BRANDS_PRODUCTS_QUERY,{
-            variables: {
-                offset: page * rowsPerPage,
-                limit: rowsPerPage
-            },
+    const [formstate, setFormState] = useState({
+        "title": '',
+        "is_active": false,
+        "brand_id" : 1,
+        "description": '',
+        "start_date": new Date(),
+        "end_date": new Date(),
+        "data": [],
     });
+    
+    const { loading, error, data, refetch } = useQuery(GET_BRANDS_QUERY);
 
-    const totalRebateCounts = data?.Products_aggregate?.aggregate?.count;
-    console.log("after add modal seleced", selected);
+    const{loading:productsLoading, error:productsError, data:productsData} = useQuery(GET_PRODUCTS_BY_BRAND_QUERY, {
+        variables : {
+            offset: page * rowsPerPage,
+            limit: rowsPerPage,
+            _eq : formstate.brand_id
+        },
+        skip: !formstate.brand_id,
+
+    })
+    const totalRebateCounts = productsData?.Products_aggregate?.aggregate?.count;
 
     // Pagination handlers
     const handlePageChange = (event, newPage) => {
@@ -51,15 +64,6 @@ export const AddModal = ({open, handleClose, setIsSubmitted}) => {
         setPage(0);
     };
 
-    const [formstate, setFormState] = useState({
-        "title": '',
-        "is_active": false,
-        "brand_id" : 1,
-        "description": '',
-        "start_date": new Date(),
-        "end_date": new Date(),
-        "data": [],
-    });
 
     const handleFormValueChange = (event) => {
         setFormState({
@@ -78,9 +82,7 @@ export const AddModal = ({open, handleClose, setIsSubmitted}) => {
     const [insertRebateWithProducts] = useMutation(INSERT_REBATE_WITH_PRODUCTS, {
         onCompleted : () => {
             refetch();
-            // setCheckedIds([]);
             handleCloseModal();
-            console.log("after saving selected",selected)
         }
     });
 
@@ -88,6 +90,7 @@ export const AddModal = ({open, handleClose, setIsSubmitted}) => {
         const dataObjectArray = await selected.map((item) => {
             return { product_id: item };
           });
+
         const { returnData } = await insertRebateWithProducts({
             variables: {
                 "title": formstate.title,
@@ -216,7 +219,7 @@ export const AddModal = ({open, handleClose, setIsSubmitted}) => {
                     <Grid xs={12} md={12} >
                         <Stack spacing={2} direction="row" justifyContent="space-between" >
                             <Stack>
-                                <FormControlLabel control={<Switch defaultChecked />} label="Use All Products" />
+                                <FormControlLabel control={<Switch  />} label="Use All Products" />
                             </Stack>
                             <Stack spacing={2} direction="row" justifyContent="space-between">
                                 <Button variant="contained" alignitems="right">Filter</Button>
@@ -228,7 +231,7 @@ export const AddModal = ({open, handleClose, setIsSubmitted}) => {
                     <Grid xs={12} md={12}>
                         <ProductsTable
                             count={totalRebateCounts}
-                            items={data}
+                            items={productsData}
                             onPageChange={handlePageChange}
                             onRowsPerPageChange={handleRowsPerPageChange}
                             page={page}

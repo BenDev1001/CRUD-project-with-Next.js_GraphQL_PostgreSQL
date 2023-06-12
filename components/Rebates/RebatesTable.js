@@ -166,7 +166,7 @@ export const RebatesTable = (props) => {
         selectedId = {selectedId} 
         isActive = {isActive}/>
         <DeleteModal open = {openDelete} handleClose={handleDeleteClose} selectedId = {selectedId} />
-        <EditModal open={openEdit} handleClose={handleEditClose} setIsSubmitted = {setIsSubmitted} selectedId = {selectedId} isView = {view}/>
+        {openEdit && <EditModal open={openEdit} handleClose={handleEditClose} setIsSubmitted = {setIsSubmitted} selectedId = {selectedId} isView = {view}/>}
 
 
     </Card>

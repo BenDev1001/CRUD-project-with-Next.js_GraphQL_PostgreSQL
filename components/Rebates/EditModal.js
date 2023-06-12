@@ -13,7 +13,7 @@ import Grid from '@mui/material/Unstable_Grid2';
 import Switch from '@mui/material/Switch';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import { useQuery, useMutation, gql } from '@apollo/client';
-import { GET_SELECTED_DATA_QUERY } from '../../crud-operations/queries';
+import { GET_SELECTED_DATA_QUERY, GET_PRODUCTS_BY_BRAND_QUERY } from '../../crud-operations/queries';
 import { UPDATE_REBATE_WITH_PRODUCTS } from '../../crud-operations/mutations';
 import { Stack } from '@mui/material';
 import { ProductsTable } from './ProductsTable';
@@ -29,10 +29,6 @@ export const EditModal = ({open, handleClose, setIsSubmitted, selectedId, isView
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(5);
     const [selected, setCheckedIds] = useState([]);
-    const [submitClicked, setSubmitClicked] = useState(false);
-    console.log("selectedId in edit modal", selectedId)
-
-
     const [editFormstate, setEditFormState] = useState({
         'id' : '',
         "title": '',
@@ -44,23 +40,16 @@ export const EditModal = ({open, handleClose, setIsSubmitted, selectedId, isView
         "object": [],
     });
     
-    const { loading, error, data, refetch } = useQuery(GET_SELECTED_DATA_QUERY,{
-            skip:!open,
+    const { loading: allLoading, error:allError, data:allData, refetch } = useQuery(GET_SELECTED_DATA_QUERY,{
             variables: {
-                offset: page * rowsPerPage,
-                limit: rowsPerPage,
                 rebateId : {
                     "_eq" : selectedId
                 }
             },
     });
-
-    const totalRebateCounts = data?.Products_aggregate?.aggregate?.count;
-
-
     
-    const setFormDataToInput = async (data) => {
-        const selectedRebateData = data?.Rebates[0];
+    const setFormDataToInput = async (allData) => {
+        const selectedRebateData = allData?.Rebates[0];
         await setEditFormState({
             "id" : selectedRebateData?.id,
             "title": selectedRebateData?.title,
@@ -71,15 +60,27 @@ export const EditModal = ({open, handleClose, setIsSubmitted, selectedId, isView
             "end_date": selectedRebateData?.end_date,
             "object": []
         });
-        const checkProductsIds = selectedRebateData?.Rebates_Rebate_products?.map(item => item.product_id);
+        const selectedProductData = allData?.Rebates[0];
+        const checkProductsIds = selectedProductData?.Rebates_Rebate_products?.map(item => item.product_id);
         await setCheckedIds(checkProductsIds);
     }
+    
+    const{loading:productsLoading, error:productsError, data:productsData} = useQuery(GET_PRODUCTS_BY_BRAND_QUERY, {
+        variables : {
+            offset: page * rowsPerPage,
+            limit: rowsPerPage,
+            _eq : editFormstate.brand_id
+        },
+        skip: !editFormstate.brand_id,
+    })
+    
+    const totalRebateCounts = productsData?.Products_aggregate?.aggregate?.count;
 
     useEffect(() => {
-        if (!loading && data) {
-            setFormDataToInput(data);
+        if (!allLoading && allData) {
+            setFormDataToInput(allData);
         }
-    }, [loading, data]);
+    }, [allLoading, allData]);
 
 
     // Pagination handlers
@@ -113,7 +114,6 @@ export const EditModal = ({open, handleClose, setIsSubmitted, selectedId, isView
     });
 
     const handleSubmit = async () => {
-        await setSubmitClicked(true);
         const dataObjectArray = await selected.map((item) => {
             return { rebate_id : editFormstate.id, product_id: item };
         });
@@ -134,10 +134,10 @@ export const EditModal = ({open, handleClose, setIsSubmitted, selectedId, isView
         await setIsSubmitted(true);
     };
 
-    if (loading) {
+    if (allLoading) {
         return 'loading';
     }
-    if (error) {
+    if (allError) {
         return 'error';
     }
     
@@ -175,7 +175,7 @@ export const EditModal = ({open, handleClose, setIsSubmitted, selectedId, isView
                             SelectProps={{ native: true }}
                             value={editFormstate.brand_id}
                             >
-                            {data?.Brands?.map((option) => (
+                            {allData?.Brands?.map((option) => (
                                 <option
                                 key={option.id}
                                 value={option.id}
@@ -232,7 +232,7 @@ export const EditModal = ({open, handleClose, setIsSubmitted, selectedId, isView
                     <Grid xs={12} md={12} >
                         <Stack spacing={2} direction="row" justifyContent="space-between" >
                             <Stack>
-                                <FormControlLabel control={<Switch defaultChecked />} label="Use All Products" />
+                                <FormControlLabel control={<Switch  />} label="Use All Products" />
                             </Stack>
                             <Stack spacing={2} direction="row" justifyContent="space-between">
                                 <Button variant="contained" alignitems="right">Filter</Button>
@@ -244,7 +244,7 @@ export const EditModal = ({open, handleClose, setIsSubmitted, selectedId, isView
                     <Grid xs={12} md={12}>
                         <ProductsTable
                             count={totalRebateCounts}
-                            items={data}
+                            items={productsData}
                             onPageChange={handlePageChange}
                             onRowsPerPageChange={handleRowsPerPageChange}
                             page={page}
